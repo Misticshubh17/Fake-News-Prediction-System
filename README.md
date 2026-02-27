@@ -20,7 +20,8 @@ This project aims to develop an automated machine learning system that can accur
 
 ## Project Structure
 
-`Fake-News-Detection-System/
+```
+Fake-News-Detection-System/
 │
 ├── preprocess.py      # Data cleaning and time-based splitting
 ├── model.py           # ML pipeline, training, and model saving
@@ -28,7 +29,8 @@ This project aims to develop an automated machine learning system that can accur
 ├── app.py             # Streamlit web application
 ├── model.joblib       # Saved trained model
 ├── requirements.txt   # Project dependencies
-└── README.md`
+└── README.md
+```
 
 ---
 
@@ -110,8 +112,10 @@ The trained model is saved using joblib and integrated into a Streamlit web appl
 - Confidence score display
 
 To run the app locally:
-`pip install -r requirements.txt
-streamlit run app.py`
+```
+pip install -r requirements.txt
+streamlit run app.py
+```
 
 ---
 
