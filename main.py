@@ -1,8 +1,51 @@
 import streamlit as st
 import requests
 import examples
+import re
+import nltk
+from nltk.corpus import words
 
-API_URL = "http://127.0.0.1:8000/predict"
+nltk.download('words')
+
+english_vocab = set(words.words())
+
+def is_garbage(text: str) -> bool:
+    text = text.strip()
+
+    # Too many repeated characters like aaaaaaaa
+    if re.search(r"(.)\1{6,}", text):
+        return True
+
+    # Too many non-alphabetic characters
+    alpha_ratio = sum(c.isalpha() for c in text) / max(len(text), 1)
+    if alpha_ratio < 0.6:
+        return True
+
+    # Low unique word ratio (spam-like repetition)
+    words = text.lower().split()
+    if len(words) > 0:
+        unique_ratio = len(set(words)) / len(words)
+        if unique_ratio < 0.3:
+            return True
+
+    # Remove symbols
+    clean = re.sub(r"[^a-z\s]", "", text)
+
+    tokens = clean.split()
+
+    if len(tokens) < 5:
+        return True
+
+    # Percentage of real English words
+    real_words = sum(1 for w in tokens if w in english_vocab)
+    ratio = real_words / len(tokens)
+
+    if ratio < 0.4:
+        return True
+
+    return False
+
+API_URL = "https://fake-news-prediction-system-api.onrender.com/predict"
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -59,88 +102,91 @@ text = st.text_area("Enter News Text", value=examples[selected_example]["text"],
 
 # ---------------- BUTTON ----------------
 if st.button("Predict"):
-
-    if not title or not text:
-        st.warning("⚠ Please enter both title and text.")
-        st.stop()
-
     payload = {
         "title": title,
         "text": text
     }
 
-    with st.spinner("Analyzing news..."):
+    if not title or not text:
+        st.warning("⚠ Please enter both title and text.")
+        st.stop()
 
-        try:
-            response = requests.post(API_URL, json=payload)
+    elif is_garbage(title + " " + text):
+        st.error("Input appears to be invalid or meaningless text.")
 
-            if response.status_code == 200:
-                result = response.json()
-                prediction = result["prediction"]
-                confidence = float(result["confidence"])
+    else:
+        with st.spinner("Analyzing news..."):
 
-                col1, col2 = st.columns(2)
+            try:
+                response = requests.post(API_URL, json=payload)
 
-                # ---------------- LEFT: CONFIDENCE RING ----------------
-                with col1:
-                    st.markdown("### Model Confidence")
-                    ring_color = "#2e7d32" if prediction.lower() == "true" else "#c62828"
+                if response.status_code == 200:
+                    result = response.json()
+                    prediction = result["prediction"]
+                    confidence = float(result["confidence"])
 
-                    st.markdown(f"""
-                        <div style="display:flex; justify-content:center; margin-top:20px;">
-                            <div style="
-                                width:180px;
-                                height:180px;
-                                border-radius:50%;
-                                background: conic-gradient(
-                                    {ring_color} {confidence * 100}%,
-                                    #e0e0e0 {confidence * 100}%
-                                );
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;
-                                font-size:30px;
-                                font-weight:bold;
-                            ">
+                    col1, col2 = st.columns(2)
+
+                    # ---------------- LEFT: CONFIDENCE RING ----------------
+                    with col1:
+                        st.markdown("### Model Confidence")
+                        ring_color = "#2e7d32" if prediction.lower() == "true" else "#c62828"
+
+                        st.markdown(f"""
+                            <div style="display:flex; justify-content:center; margin-top:20px;">
                                 <div style="
-                                    width:135px;
-                                    height:135px;
+                                    width:180px;
+                                    height:180px;
                                     border-radius:50%;
-                                    background:white;
+                                    background: conic-gradient(
+                                        {ring_color} {confidence * 100}%,
+                                        #e0e0e0 {confidence * 100}%
+                                    );
                                     display:flex;
                                     align-items:center;
-                                    justify-content:center;                                                                   
+                                    justify-content:center;
+                                    font-size:30px;
+                                    font-weight:bold;
                                 ">
-                                <div class="confidence-text">    
-                                    {confidence:.2f}%                                
-                                </div>                                    
+                                    <div style="
+                                        width:135px;
+                                        height:135px;
+                                        border-radius:50%;
+                                        background:white;
+                                        display:flex;
+                                        align-items:center;
+                                        justify-content:center;                                                                   
+                                    ">
+                                    <div class="confidence-text">    
+                                        {confidence:.2f}%                                
+                                    </div>                                    
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-
-                    st.markdown("<p class='center'>Confidence Score</p>", unsafe_allow_html=True)
-
-                # ---------------- RIGHT: PREDICTION RESULT ----------------
-                with col2:
-                    st.markdown("### Prediction Result")
-
-                    if prediction.lower() == "true":
-                        st.markdown(f"""
-                            <div class="result-box real">
-                                ✅ REAL NEWS                               
-                            </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"""
-                            <div class="result-box fake">
-                                ❌ FAKE NEWS                                
-                            </div>
                         """, unsafe_allow_html=True)
 
-            else:
-                st.error(f"API Error: {response.status_code}")
-                st.write(response.text)
+                        st.markdown("<p class='center'>Confidence Score</p>", unsafe_allow_html=True)
 
-        except requests.exceptions.ConnectionError:
-            st.error("Cannot connect to FastAPI.")
+                    # ---------------- RIGHT: PREDICTION RESULT ----------------
+                    with col2:
+                        st.markdown("### Prediction Result")
+
+                        if prediction.lower() == "true":
+                            st.markdown(f"""
+                                <div class="result-box real">
+                                    ✅ REAL NEWS                               
+                                </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"""
+                                <div class="result-box fake">
+                                    ❌ FAKE NEWS                                
+                                </div>
+                            """, unsafe_allow_html=True)
+
+                else:
+                    st.error(f"API Error: {response.status_code}")
+                    st.write(response.text)
+
+            except requests.exceptions.ConnectionError:
+                st.error("Cannot connect to FastAPI.")
