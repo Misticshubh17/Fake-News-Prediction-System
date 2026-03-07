@@ -10,6 +10,19 @@ The objective of this project is to design a scalable and modular solution that 
 
 ---
 
+## Live Demo
+
+The project is deployed using **Streamlit** and connected to a **FastAPI prediction API**.
+
+Try it here:  
+   https://fake-news-prediction-system-6wjmq3n2utrb943frqbifd.streamlit.app/
+
+Note: The API is deployed on Render’s free tier. If inactive, the first request may take ~50–60 seconds while the server wakes up. Subsequent requests will be faster.
+
+Enter any news headline or article text and the system will classify it as **Fake** or **Real** using the trained ML pipeline.
+
+---
+
 ## Problem Statement
 
 The rapid growth of online media platforms has significantly increased the spread of misinformation. Fake news can influence public opinion, political decisions, and social stability. Manual verification is not scalable due to the large volume of digital content.
